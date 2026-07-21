@@ -1,0 +1,7 @@
+build/
+
+# Misc
+.DS_Store
+*:Zone.Identifier
+[Dd]esktop.ini
+

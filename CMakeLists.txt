@@ -4,4 +4,6 @@ project(chip8 C)
 
 add_executable(chip8
   src/main.c
+  src/cpu.c
+  src/cpu.h
 )

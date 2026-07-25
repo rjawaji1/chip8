@@ -4,29 +4,25 @@
 #include <stdint.h>
 
 typedef struct {
-  uint8_t memory[4096];
-  uint8_t vram[256]; // 64 x 32 bits
-  uint16_t pc;
+	uint8_t memory[4096];
+	uint8_t vram[256]; // 64 x 32 bits
+	uint16_t pc;
 
-  uint8_t v[16];
-  uint16_t i;
+	uint8_t v[16];
+	uint16_t i;
 
-  uint16_t stack[16];
-  uint8_t sp;
+	uint16_t stack[16];
+	uint8_t sp;
 
-  uint8_t dt;
-  uint8_t st;
+	uint8_t dt;
+	uint8_t st;
 } Cpu;
 
 Cpu cpu_new();
 
 void cpu_step(Cpu *cpu);
 
-// Debug
-void cpu_print_registers(Cpu *cpu);
-
-typedef void (*OpcodeHandler)(Cpu *cpu, uint16_t opcode);
-
+// Instructions
 static inline void op_0(Cpu *cpu, uint16_t opcode);
 static inline void op_1(Cpu *cpu, uint16_t opcode);
 static inline void op_2(Cpu *cpu, uint16_t opcode);
@@ -43,5 +39,9 @@ static inline void op_c(Cpu *cpu, uint16_t opcode);
 static inline void op_d(Cpu *cpu, uint16_t opcode);
 static inline void op_e(Cpu *cpu, uint16_t opcode);
 static inline void op_f(Cpu *cpu, uint16_t opcode);
+
+// Debug
+void cpu_print_registers(Cpu *cpu);
+void cpu_draw_screen(Cpu *cpu);
 
 #endif

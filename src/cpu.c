@@ -1,6 +1,8 @@
 #include <assert.h>
+#include <stdckdint.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cpu.h"
@@ -40,120 +42,129 @@ void cpu_step(Cpu *cpu){
 	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[(cpu->pc) + 1];
 	handlers[(opcode & 0xF000) >> 12](cpu, opcode);
 	cpu->pc+=2;
-
-	uint8_t code = (opcode & 0xF000) >> 12;
-
-	uint16_t nnn = opcode & 0x0FFF;
-	uint8_t kk =  opcode & 0x00FF;
-	uint8_t x = (opcode & 0x0F00) >> 8;
-	uint8_t y = (opcode & 0x00F0) >> 4;
-	uint8_t n = (opcode & 0x000F);
-
-
-	switch (opcode & 0xF000) {
-		case 0x0000:
-			if(kk == 0xE0){
-				memset(cpu->memory,0,sizeof(cpu->memory));
-			}
-			else if(kk == 0xEE){
-				cpu->pc = cpu->stack[cpu->sp];
-				cpu->sp--;
-			}
-			break;
-		case 0x1000:
-			cpu->pc = nnn;
-			break;
-		case 0x2000:
-			cpu->sp++;
-			cpu->stack[cpu->sp] = nnn;
-			cpu->pc = nnn;
-		case 0x3000:
-			if(cpu->v[x] != kk) cpu->pc += 4;
-			else cpu->pc += 2;
-			break;
-		case 0x4000:
-			if(cpu->v[x] != kk) cpu -> pc += 4;
-			else cpu->pc += 2;
-			break;
-		case 0x5000:
-			if(cpu->v[x] == cpu->v[y]) cpu -> pc += 4;
-			else cpu->pc += 2;
-			break;
-		case 0x6000:
-			cpu -> v[x] = kk;
-		default:
-			cpu -> pc += 2;
-	}
 }
 
-static void op_0(Cpu *cpu, uint16_t opcode){
+static inline void op_0(Cpu *cpu, uint16_t opcode){
 	if(opcode == 0x00E0) {
 		memset(cpu->vram,0,sizeof(cpu->vram));
 	}
 	else if (opcode == 0x00EE) {
-		cpu->pc = cpu->stack[cpu->sp];
-		cpu->pc--;
+		cpu->pc = cpu->stack[cpu->sp] - 2;
+		cpu->sp--;
 	}
+}
+
+static inline void op_1(Cpu *cpu, uint16_t opcode){
+	cpu->sp++;
+	cpu->stack[cpu->sp] = cpu->pc;
+}
+
+static inline void op_2(Cpu *cpu, uint16_t opcode){
+	uint16_t nnn = opcode & 0x0FFF;
+
+	cpu->sp++;
+	cpu->stack[cpu->sp] = nnn;
+	cpu->pc = nnn - 2;
+}
+
+static inline void op_3(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+	if(cpu->v[x] != kk) cpu->pc += 2;
+}
+
+static inline void op_4(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+	if(cpu->v[x] == kk) cpu->pc += 2;
+}
+
+static inline void op_5(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t y = (opcode & 0x00F0) >> 4;
+	if(cpu->v[x] == cpu->v[y]) cpu -> pc += 2;
+}
+
+static inline void op_6(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+	cpu -> v[x] = kk;
+}
+
+static inline void op_7(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+	cpu->v[x] += kk;
+}
+
+static inline void op_8(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t y = (opcode & 0x00F0) >> 4;
+	uint8_t n = opcode & 0x00F0;
+
+	switch(n){
+		case 0x1:
+			cpu->v[x] |= cpu->v[y];
+			break;
+		case 0x2:
+			cpu->v[x] &= cpu->v[y];
+			break;
+		case 0x3:
+			cpu->v[x] ^= cpu->v[y];
+			break;
+		case 0x4:
+			cpu->v[0xf] = ckd_add(&cpu->v[x], cpu->v[x], cpu->v[y]);
+			break;
+		case 0x5:
+			cpu->v[0xF] = cpu->v[x] > cpu->v[y];
+			cpu->v[x] -= cpu->v[y];
+			break;
+		case 0x6:
+			cpu->v[0xF] = (cpu->v[x] & 0b00000001) == 1;
+			cpu->v[x] >>= 1;
+			break;
+		case 0x7:
+			cpu->v[0xF] = cpu->v[y] > cpu->v[x];
+			cpu->v[x] = cpu->v[y] - cpu->v[x];
+			break;
+		case 0xE:
+			cpu->v[0xF] = (cpu->v[x] & 0b10000000) == 0b10000000;
+			cpu->v[x] <<= 1;
+			break;
+	}
+}
+
+static inline void op_9(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t y = (opcode & 0x00F0) >> 4;
+	if(cpu->v[x] != cpu->v[y]) cpu->pc += 2;
+}
+
+static inline void op_a(Cpu *cpu, uint16_t opcode){
+	cpu->i = opcode & 0x0FFF;
+}
+
+static inline void op_b(Cpu *cpu, uint16_t opcode){
+	cpu->pc = cpu->i + cpu->v[0] - 2;
+}
+
+static inline void op_c(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+	cpu->v[x] = (rand() % 256) & kk;
+}
+
+static inline void op_d(Cpu *cpu, uint16_t opcode){
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t y = (opcode & 0x00F0) >> 4;
+	uint8_t n = opcode & 0x000F;
+}
+
+static inline void op_e(Cpu *cpu, uint16_t opcode){
 	return;
 }
 
-static void op_1(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_2(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_3(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_4(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_5(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_6(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_7(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_8(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_9(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_a(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_b(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_c(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_d(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_e(Cpu *cpu, uint16_t opcode){
-	return;
-}
-
-static void op_f(Cpu *cpu, uint16_t opcode){
+static inline void op_f(Cpu *cpu, uint16_t opcode){
 	return;
 }
 

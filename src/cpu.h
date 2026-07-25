@@ -3,22 +3,20 @@
 
 #include <stdint.h>
 
-
 typedef struct {
-	uint8_t memory[4096];
-	uint8_t vram[256];     // 64 x 32 bits
-	uint16_t pc;
+  uint8_t memory[4096];
+  uint8_t vram[256]; // 64 x 32 bits
+  uint16_t pc;
 
-	uint8_t v[16];
-	uint16_t i;
+  uint8_t v[16];
+  uint16_t i;
 
-	uint16_t stack[16];
-	uint8_t sp;
+  uint16_t stack[16];
+  uint8_t sp;
 
-	uint8_t dt;
-	uint8_t st;
+  uint8_t dt;
+  uint8_t st;
 } Cpu;
-
 
 Cpu cpu_new();
 

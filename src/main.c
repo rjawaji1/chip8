@@ -3,6 +3,10 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+#define FRAME_TIME 16
 
 int main(int argc, char **argv) {
 	// Initialize the cpu. This should be small enough to fit on the heap
@@ -22,6 +26,7 @@ int main(int argc, char **argv) {
 
 	for (int i = 0; i < 256; ++i) {
 		cpu_step(&cpu);
+		usleep(FRAME_TIME);
 	}
 	cpu_draw_screen(&cpu);
 

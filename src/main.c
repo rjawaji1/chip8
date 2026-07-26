@@ -20,10 +20,10 @@ int main(int argc, char **argv) {
 		cpu.memory[i] = value;
 	}
 
-	while (cpu.pc < 0xFFF || (cpu.memory[cpu.pc] == 0x00 && cpu.memory[cpu.pc + 1] == 0x00)) {
+	for (int i = 0; i < 256; ++i) {
 		cpu_step(&cpu);
-		cpu_draw_screen(&cpu);
 	}
+	cpu_draw_screen(&cpu);
 
 	return 0;
 }

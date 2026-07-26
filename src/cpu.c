@@ -33,7 +33,8 @@ Cpu cpu_new() {
 }
 
 void cpu_step(Cpu *cpu) {
-	uint16_t opcode = cpu->memory[cpu->pc + 1] << 8 | cpu->memory[cpu->pc];
+	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[cpu->pc + 1];
+	printf("0x%x\n", opcode);
 
 	// clang-format off
 	switch ((opcode & 0xF000) >> 12) {
@@ -50,6 +51,7 @@ void cpu_step(Cpu *cpu) {
 	case 0xA: op_a(cpu, opcode); break;
 	case 0xB: op_b(cpu, opcode); break;
 	case 0xC: op_c(cpu, opcode); break;
+	case 0xD: op_d(cpu, opcode); break;
 	case 0xE: op_e(cpu, opcode); break;
 	case 0xF: op_f(cpu, opcode); break;
 	}
@@ -172,10 +174,20 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 	uint8_t y_pos = cpu->v[(opcode & 0x00F0) >> 4];
 	uint8_t n = opcode & 0x000F;
 
-	uint8_t row;
+	uint8_t row, col, sprite, left, right, byte, bit = 0;
 	for (int i = 0; i < n; ++i) {
-		row = y_pos = i % 32;
-		cpu->vram[row * 8 + x_pos] ^= cpu->memory[cpu->i + i];
+		sprite = cpu->memory[cpu->i + i];
+
+		byte = x_pos >> 3; // Divide by 8
+		bit = x_pos & 7;   // Get the remaider of 8 which is the last 3 bits
+
+		left = sprite << (8 - bit);
+		right = sprite >> bit;
+
+		row = (y_pos + i) % 32;
+
+		cpu->vram[row * 8 + byte] ^= left;
+		cpu->vram[row * 8 + (byte + 1) % 64] ^= right;
 	}
 }
 
@@ -204,18 +216,31 @@ void cpu_print_registers(Cpu *cpu) {
 	printf("    PC: %x\n", cpu->pc);
 }
 
+/**
+ * Draws the video buffer to the termianl screen
+ */
 void cpu_draw_screen(Cpu *cpu) {
+	// Clear the terminal
 	printf("\e[1;1H\e[2J");
+
+	// Construct the buffer, note the + 1 is for
+	// the \n and \0 characters the
+	char buffer[32 * (64 + 1) + 1];
+	char *p = buffer;
+
+	// Draw into the terminal
 	for (int row = 0; row < 32; ++row) {
 		for (int col = 0; col < 8; ++col) {
 			uint8_t byte = cpu->vram[row * 8 + col];
-			for (int bit = 0b10000000; bit != 0b00000000; bit >>= 1) {
-				if ((byte & bit) == bit)
-					printf("█");
-				else
-					printf(" ");
+			for (int bit = 0x80; bit != 0x00; bit >>= 1) {
+				*p++ = ((byte & bit) == bit) ? '1' : ' ';
 			}
 		}
-		printf("\n");
+		*p++ = '\n';
 	}
+	*p = '\0';
+
+	// Display the buffer to the screen
+	fputs(buffer, stdout);
+	fflush(stdout);
 };

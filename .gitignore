@@ -1,5 +1,7 @@
 build/
 
+.cache/
+
 # Misc
 .DS_Store
 *:Zone.Identifier

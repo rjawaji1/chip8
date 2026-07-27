@@ -34,7 +34,6 @@ Cpu cpu_new() {
 
 void cpu_step(Cpu *cpu) {
 	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[cpu->pc + 1];
-	printf("0x%x\n", opcode);
 
 	// clang-format off
 	switch ((opcode & 0xF000) >> 12) {

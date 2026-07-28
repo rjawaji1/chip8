@@ -69,8 +69,7 @@ static inline void op_0(Cpu *cpu, uint16_t opcode) {
 }
 
 static inline void op_1(Cpu *cpu, uint16_t opcode) {
-	cpu->sp++;
-	cpu->stack[cpu->sp] = cpu->pc;
+	cpu->pc = (opcode & 0x0FFF) - 2;
 }
 
 static inline void op_2(Cpu *cpu, uint16_t opcode) {
@@ -158,14 +157,18 @@ static inline void op_9(Cpu *cpu, uint16_t opcode) {
 		cpu->pc += 2;
 }
 
-static inline void op_a(Cpu *cpu, uint16_t opcode) { cpu->i = opcode & 0x0FFF; }
+static inline void op_a(Cpu *cpu, uint16_t opcode) {
+	cpu->i = opcode & 0x0FFF;
+}
 
-static inline void op_b(Cpu *cpu, uint16_t opcode) { cpu->pc = cpu->i + cpu->v[0] - 2; }
+static inline void op_b(Cpu *cpu, uint16_t opcode) {
+	cpu->pc = cpu->i + cpu->v[0] - 2;
+}
 
 static inline void op_c(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t kk = opcode & 0x00FF;
-	cpu->v[x] = (rand() % 256) & kk;
+	cpu->v[x] = (uint8_t)rand() & kk;
 }
 
 static inline void op_d(Cpu *cpu, uint16_t opcode) {
@@ -185,14 +188,19 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 
 		row = (y_pos + i) % 32;
 
+		// TODO: Check For Collisions
 		cpu->vram[row * 8 + byte] ^= left;
-		cpu->vram[row * 8 + (byte + 1) % 64] ^= right;
+		cpu->vram[row * 8 + ((byte + 1) % 8)] ^= right;
 	}
 }
 
-static inline void op_e(Cpu *cpu, uint16_t opcode) { return; }
+static inline void op_e(Cpu *cpu, uint16_t opcode) {
+	return;
+}
 
-static inline void op_f(Cpu *cpu, uint16_t opcode) { return; }
+static inline void op_f(Cpu *cpu, uint16_t opcode) {
+	return;
+}
 
 void cpu_print_registers(Cpu *cpu) {
 	printf("Registers:\n");
@@ -214,32 +222,3 @@ void cpu_print_registers(Cpu *cpu) {
 	printf("    F: %x\n", cpu->v[0xF]);
 	printf("    PC: %x\n", cpu->pc);
 }
-
-/**
- * Draws the video buffer to the termianl screen
- */
-void cpu_draw_screen(Cpu *cpu) {
-	// Clear the terminal
-	printf("\e[1;1H\e[2J");
-
-	// Construct the buffer, note the + 1 is for
-	// the \n and \0 characters the
-	char buffer[32 * (64 + 1) + 1];
-	char *p = buffer;
-
-	// Draw into the terminal
-	for (int row = 0; row < 32; ++row) {
-		for (int col = 0; col < 8; ++col) {
-			uint8_t byte = cpu->vram[row * 8 + col];
-			for (int bit = 0x80; bit != 0x00; bit >>= 1) {
-				*p++ = ((byte & bit) == bit) ? '1' : ' ';
-			}
-		}
-		*p++ = '\n';
-	}
-	*p = '\0';
-
-	// Display the buffer to the screen
-	fputs(buffer, stdout);
-	fflush(stdout);
-};

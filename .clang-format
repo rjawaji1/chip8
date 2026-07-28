@@ -6,3 +6,5 @@ IndentWidth: 4
 TabWidth: 4
 ColumnLimit: 120
 
+AllowShortFunctionsOnASingleLine: None
+

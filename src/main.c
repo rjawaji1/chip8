@@ -1,3 +1,4 @@
+#include "SDL3/SDL_events.h"
 #include "cpu.h"
 
 #include <stdint.h>
@@ -51,7 +52,6 @@ int main(int argc, char **argv) {
 	}
 
 	// Begin Main Loop
-
 	bool running = true;
 	SDL_Event event;
 
@@ -69,24 +69,35 @@ int main(int argc, char **argv) {
 			cpu_step(&cpu);
 		}
 
+		// Run every 60hz
 		if (SDL_GetTicks() - last_frame >= FRAME_TIME) {
-			SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-			SDL_RenderPresent(renderer);
-			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			// Decrement Timers
+			if (cpu.st > 0)
+				cpu.st--;
+			if (cpu.dt > 0)
+				cpu.dt--;
 
-			for (int y = 0; y < 32; ++y) {
-				for (int x = 0; x < 64; ++x) {
-					int pixel = y * 64 + x;
+			// Clear Display
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+			SDL_RenderClear(renderer);
+
+			// Render Display
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+			for (int row = 0; row < 32; ++row) {
+				for (int col = 0; col < 64; ++col) {
+					int pixel = (row * 64) + col;
 					int byte = pixel >> 3;
 					int bit = pixel & 7;
 
-					if ((cpu.vram[byte] >> bit) & 1) {
-						SDL_FRect rect = {x * 10, y * 10, 10, 10};
-
+					if ((cpu.vram[byte] >> (7 - bit)) & 1) {
+						SDL_FRect rect = {col * 10, row * 10, 10, 10};
 						SDL_RenderFillRect(renderer, &rect);
 					}
 				}
 			}
+			SDL_RenderPresent(renderer);
+
+			// Set the next target frame
 			last_frame += FRAME_TIME;
 		}
 

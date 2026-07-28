@@ -35,6 +35,8 @@ Cpu cpu_new() {
 void cpu_step(Cpu *cpu) {
 	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[cpu->pc + 1];
 
+	cpu->pc += 2;
+
 	// clang-format off
 	switch ((opcode & 0xF000) >> 12) {
 	case 0x0: op_0(cpu, opcode); break;
@@ -55,8 +57,6 @@ void cpu_step(Cpu *cpu) {
 	case 0xF: op_f(cpu, opcode); break;
 	}
 	// clang-format on
-
-	cpu->pc += 2;
 }
 
 static inline void op_0(Cpu *cpu, uint16_t opcode) {
@@ -66,7 +66,7 @@ static inline void op_0(Cpu *cpu, uint16_t opcode) {
 		break;
 
 	case 0x00EE: // RET - Return from subroutine
-		cpu->pc = cpu->stack[cpu->sp] - 2;
+		cpu->pc = cpu->stack[cpu->sp];
 		cpu->sp--;
 		break;
 	}
@@ -77,7 +77,7 @@ static inline void op_0(Cpu *cpu, uint16_t opcode) {
  * Jump to location nnn
  */
 static inline void op_1(Cpu *cpu, uint16_t opcode) {
-	cpu->pc = (opcode & 0x0FFF) - 2;
+	cpu->pc = opcode & 0x0FFF;
 }
 
 /*
@@ -89,7 +89,7 @@ static inline void op_2(Cpu *cpu, uint16_t opcode) {
 
 	cpu->sp++;
 	cpu->stack[cpu->sp] = nnn;
-	cpu->pc = nnn - 2;
+	cpu->pc = nnn;
 }
 
 /*
@@ -226,7 +226,7 @@ static inline void op_a(Cpu *cpu, uint16_t opcode) {
  * Jump to location nnn + V0.
  */
 static inline void op_b(Cpu *cpu, uint16_t opcode) {
-	cpu->pc = cpu->i + cpu->v[0] - 2;
+	cpu->pc = cpu->i + cpu->v[0];
 }
 
 /**

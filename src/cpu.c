@@ -33,6 +33,10 @@ Cpu cpu_new() {
 }
 
 void cpu_step(Cpu *cpu) {
+	// If the program counter is out of bounds we stop processing
+	if (cpu->pc >= 0x0FFF)
+		return;
+
 	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[cpu->pc + 1];
 
 	cpu->pc += 2;
@@ -87,8 +91,8 @@ static inline void op_1(Cpu *cpu, uint16_t opcode) {
 static inline void op_2(Cpu *cpu, uint16_t opcode) {
 	uint16_t nnn = opcode & 0x0FFF;
 
-	cpu->sp++;
 	cpu->stack[cpu->sp] = nnn;
+	cpu->sp++;
 	cpu->pc = nnn;
 }
 
@@ -99,8 +103,10 @@ static inline void op_2(Cpu *cpu, uint16_t opcode) {
 static inline void op_3(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t kk = opcode & 0x00FF;
-	if (cpu->v[x] != kk)
+
+	if (cpu->v[x] == kk) {
 		cpu->pc += 2;
+	}
 }
 
 /*
@@ -110,8 +116,10 @@ static inline void op_3(Cpu *cpu, uint16_t opcode) {
 static inline void op_4(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t kk = opcode & 0x00FF;
-	if (cpu->v[x] == kk)
+
+	if (cpu->v[x] != kk) {
 		cpu->pc += 2;
+	}
 }
 
 /*
@@ -121,8 +129,10 @@ static inline void op_4(Cpu *cpu, uint16_t opcode) {
 static inline void op_5(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t y = (opcode & 0x00F0) >> 4;
-	if (cpu->v[x] == cpu->v[y])
+
+	if (cpu->v[x] == cpu->v[y]) {
 		cpu->pc += 2;
+	}
 }
 
 /*

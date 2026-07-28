@@ -248,6 +248,9 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 	uint8_t y_pos = cpu->v[(opcode & 0x00F0) >> 4];
 	uint8_t n = opcode & 0x000F;
 
+	// Clear Collision Register
+	cpu->v[0xF] = 0;
+
 	uint8_t row, col, sprite, left, right, byte, bit = 0;
 	for (int i = 0; i < n; ++i) {
 		sprite = cpu->memory[cpu->i + i];
@@ -255,15 +258,27 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 		byte = x_pos >> 3; // Divide by 8
 		bit = x_pos & 7;   // Get the modulo of 8 which is the last 3 bits
 
-		// Calculate the overflow for when it wraps around
-		left = sprite << (8 - bit);
-		right = sprite >> bit;
-
 		row = (y_pos + i) % 32;
 
-		// TODO: Check For Collisions
-		cpu->vram[row * 8 + byte] ^= left;
-		cpu->vram[row * 8 + ((byte + 1) % 8)] ^= right;
+		// The bit is aligned
+		if (bit == 0) {
+			uint8_t old = cpu->vram[row * 8 + byte];
+			cpu->vram[row * 8 + byte] ^= sprite;
+
+			cpu->v[0xF] |= (old & sprite) != 0;
+		} else {
+			uint8_t left = sprite >> bit;
+			uint8_t right = sprite << (8 - bit);
+
+			uint8_t left_old = cpu->vram[row * 8 + byte];
+			uint8_t right_old = cpu->vram[row * 8 + ((byte + 1) & 7)];
+
+			cpu->v[0xF] |= (left_old & left) != 0;
+			cpu->v[0xF] |= (right_old & right) != 0;
+
+			cpu->vram[row * 8 + byte] ^= left;
+			cpu->vram[row * 8 + ((byte + 1) & 7)] ^= right;
+		}
 	}
 }
 

@@ -33,9 +33,11 @@ Cpu cpu_new() {
 }
 
 void cpu_step(Cpu *cpu) {
-	// If the program counter is out of bounds we stop processing
-	if (cpu->pc >= 0x0FFF)
-		return;
+	// If the program counter is out of bounds we loop back to the start
+	// this is not standard and ideally it would be best to crash the system
+	if (cpu->pc >= 0x0FFF) {
+		cpu->pc = 0x200;
+	}
 
 	uint16_t opcode = cpu->memory[cpu->pc] << 8 | cpu->memory[cpu->pc + 1];
 
@@ -295,20 +297,20 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 }
 
 static inline void op_e(Cpu *cpu, uint16_t opcode) {
-	uint8_t x = (opcode & 0x0FEE) >> 8;
+	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t kk = opcode & 0x00FF;
 
 	switch (kk) {
 	// SKP Vx - Skip next instruction if key with the value of Vx is pressed.
 	case 0x9E:
-		if ((cpu->keyboard_state & (1 << cpu->v[x])) == 1) {
+		if ((cpu->keyboard_state & (1u << cpu->v[x])) != 0) {
 			cpu->pc += 2;
 		}
 		break;
 
 	// SKNP Vx - Skip next instruction if key with the value of Vx is not pressed.
-	case 0xEA:
-		if ((cpu->keyboard_state & (1 << cpu->v[x])) == 0) {
+	case 0xA1:
+		if ((cpu->keyboard_state & (1u << cpu->v[x])) == 0) {
 			cpu->pc += 2;
 		}
 		break;

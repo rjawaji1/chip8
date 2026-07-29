@@ -55,8 +55,11 @@ int main(int argc, char **argv) {
 	bool running = true;
 	SDL_Event event;
 
-	const Uint64 FRAME_TIME = 1000 / 60;
-	Uint64 last_frame = SDL_GetTicks();
+	const Uint64 DISPLAY_FRAME_TIME = 1000 / 60; // 60hz
+	const Uint64 CPU_FRAME_TIME = 1000 / 700;	 // 500hz
+
+	Uint64 last_display_frame = SDL_GetTicks();
+	Uint64 last_cpu_frame = SDL_GetTicks();
 
 	while (running) {
 		cpu_step(&cpu);
@@ -112,12 +115,14 @@ int main(int argc, char **argv) {
 			}
 		}
 
-		for (int i = 0; i < 10; i++) {
+		// Run every 500hz
+		if (SDL_GetTicks() - last_cpu_frame >= CPU_FRAME_TIME) {
 			cpu_step(&cpu);
+			last_cpu_frame += DISPLAY_FRAME_TIME;
 		}
 
 		// Run every 60hz
-		if (SDL_GetTicks() - last_frame >= FRAME_TIME) {
+		if (SDL_GetTicks() - last_display_frame >= DISPLAY_FRAME_TIME) {
 			// Decrement Timers
 			if (cpu.st > 0)
 				cpu.st--;
@@ -146,7 +151,7 @@ int main(int argc, char **argv) {
 			SDL_RenderPresent(renderer);
 
 			// Set the next target frame
-			last_frame += FRAME_TIME;
+			last_display_frame += DISPLAY_FRAME_TIME;
 		}
 
 		SDL_Delay(1);

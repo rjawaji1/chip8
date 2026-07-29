@@ -1,4 +1,4 @@
-#include "SDL3/SDL_events.h"
+#include "SDL3/SDL_audio.h"
 #include "cpu.h"
 
 #include <stdint.h>
@@ -9,9 +9,14 @@
 
 #include <SDL3/SDL.h>
 
+#define SAMPLE_RATE 44100
+#define BUFFER_SIZE 2048
+#define FREQUENCY 440.0f
+#define AMPLITUDE 0.1f
+
 int main(int argc, char **argv) {
-	// Setup a blank window
-	if (!SDL_Init(SDL_INIT_VIDEO)) {
+	// Initialize audio and video
+	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
 		fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
 		return 1;
 	}
@@ -30,6 +35,20 @@ int main(int argc, char **argv) {
 		SDL_Quit();
 		return 1;
 	}
+
+	SDL_AudioSpec src_spec;
+	src_spec.format = SDL_AUDIO_F32;
+	src_spec.channels = 1;
+	src_spec.freq = SAMPLE_RATE;
+
+	SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &src_spec, NULL, NULL);
+	if (!stream) {
+		SDL_Log("Stream creation failed: %s", SDL_GetError());
+		SDL_Quit();
+		return -1;
+	}
+
+	SDL_ResumeAudioStreamDevice(stream);
 
 	// Setup The CPU
 	Cpu cpu = cpu_new();
@@ -61,12 +80,20 @@ int main(int argc, char **argv) {
 	Uint64 last_display_frame = SDL_GetTicks();
 	Uint64 last_cpu_frame = SDL_GetTicks();
 
+	float audio_buffer[BUFFER_SIZE];
+	float audio_phase = 0;
+	float audio_volume = 1.0f; // Keep it comfortable
+	float audio_frequency = 440.0f;
+
+	SDL_ResumeAudioStreamDevice(stream);
+
 	while (running) {
 		cpu_step(&cpu);
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_EVENT_QUIT:
 				running = false;
+				break;
 
 			case SDL_EVENT_KEY_DOWN:
 				// clang-format off
@@ -154,10 +181,36 @@ int main(int argc, char **argv) {
 			last_display_frame += DISPLAY_FRAME_TIME;
 		}
 
+		if (stream && cpu.st > 0) {
+			if (SDL_AudioStreamDevicePaused(stream)) {
+				SDL_ResumeAudioStreamDevice(stream);
+			}
+			if (SDL_GetAudioStreamQueued(stream) < 2048) {
+				float sample_buffer[512];
+				for (int i = 0; i < 512; i++) {
+					// Generate a standard chiptune square wave profile
+					float period = 44100.0f / audio_frequency;
+					if (((int)(audio_phase / (period / 2.0f)) % 2) == 0) {
+						sample_buffer[i] = audio_volume;
+					} else {
+						sample_buffer[i] = -audio_volume;
+					}
+					audio_phase++;
+				}
+				SDL_PutAudioStreamData(stream, sample_buffer, sizeof(sample_buffer));
+			}
+		} else {
+			if (!SDL_AudioStreamDevicePaused(stream)) {
+				SDL_PauseAudioStreamDevice(stream);
+			}
+		}
+
+		// Slow down the processing for a bit
 		SDL_Delay(1);
 	}
 
 	SDL_DestroyRenderer(renderer);
+	SDL_DestroyAudioStream(stream);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 

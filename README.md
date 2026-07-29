@@ -2,9 +2,11 @@
 
 A chip8 Interpreter written in c
 
-Goals:
-- [ ] Change the renderer from SDL to metal via objective C
-
+Future Goals:
+- Attempt to make a platform native implementation without using SDL
+- Add a way to load roms via the ui interface
+- Create a richer interface/debugging panel
+- Write a chip8 assembler
 
 # References
 

@@ -393,24 +393,3 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 
 	return;
 }
-
-void cpu_print_registers(Cpu *cpu) {
-	printf("Registers:\n");
-	printf("    0: %x\n", cpu->v[0x0]);
-	printf("    1: %x\n", cpu->v[0x1]);
-	printf("    2: %x\n", cpu->v[0x2]);
-	printf("    3: %x\n", cpu->v[0x3]);
-	printf("    4: %x\n", cpu->v[0x4]);
-	printf("    5: %x\n", cpu->v[0x5]);
-	printf("    6: %x\n", cpu->v[0x6]);
-	printf("    7: %x\n", cpu->v[0x7]);
-	printf("    8: %x\n", cpu->v[0x8]);
-	printf("    9: %x\n", cpu->v[0x9]);
-	printf("    A: %x\n", cpu->v[0xA]);
-	printf("    B: %x\n", cpu->v[0xB]);
-	printf("    C: %x\n", cpu->v[0xC]);
-	printf("    D: %x\n", cpu->v[0xD]);
-	printf("    E: %x\n", cpu->v[0xE]);
-	printf("    F: %x\n", cpu->v[0xF]);
-	printf("    PC: %x\n", cpu->pc);
-}

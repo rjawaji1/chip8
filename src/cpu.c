@@ -190,27 +190,29 @@ static inline void op_8(Cpu *cpu, uint16_t opcode) {
 
 	// SUB Vx, Vy - Set Vx = Vx - Vy, set VF = NOT borrow.
 	case 0x5:
-		cpu->v[0xF] = cpu->v[x] >= cpu->v[y];
-		cpu->v[x] -= cpu->v[y];
+		cpu->v[0xF] = !ckd_sub(&cpu->v[x], cpu->v[x], cpu->v[y]);
 		break;
 
 	// SHR Vx {, Vy} - Set Vx = Vy SHR 1
-	case 0x6:
-		cpu->v[0xF] = (cpu->v[y] & 0b00000001) == 1;
-		cpu->v[x] = cpu->v[y] >> 1;
+	case 0x6: {
+		uint8_t temp = (cpu->v[x] & 0x01);
+		cpu->v[x] >>= 1;
+		cpu->v[0xF] = temp;
 		break;
+	}
 
 	// SUBN Vx, Vy - Set Vx = Vy - Vx, set VF = NOT borrow.
 	case 0x7:
-		cpu->v[0xF] = cpu->v[y] >= cpu->v[x];
-		cpu->v[x] = cpu->v[y] - cpu->v[x];
+		cpu->v[0xF] = !ckd_sub(&cpu->v[x], cpu->v[y], cpu->v[x]);
 		break;
 
 	// SHL Vx {, Vy} - Set Vx = Vy SHL 1.
-	case 0xE:
-		cpu->v[0xF] = (cpu->v[y] & 0b10000000) == 0b10000000;
-		cpu->v[x] = cpu->v[y] << 1;
+	case 0xE: {
+		uint8_t temp = (cpu->v[x] & 0x80) >> 7;
+		cpu->v[x] <<= 1;
+		cpu->v[0xF] = temp;
 		break;
+	}
 	}
 }
 

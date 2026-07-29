@@ -219,8 +219,10 @@ static inline void op_8(Cpu *cpu, uint16_t opcode) {
 static inline void op_9(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t y = (opcode & 0x00F0) >> 4;
-	if (cpu->v[x] != cpu->v[y])
+
+	if (cpu->v[x] != cpu->v[y]) {
 		cpu->pc += 2;
+	}
 }
 
 /*
@@ -297,6 +299,68 @@ static inline void op_e(Cpu *cpu, uint16_t opcode) {
 }
 
 static inline void op_f(Cpu *cpu, uint16_t opcode) {
+	uint8_t x = (opcode & 0x0F00) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+
+	switch (kk) {
+	// LD Vx, DT - Set Vx = delay timer value.
+	case 0x07:
+		cpu->v[x] = cpu->dt;
+		break;
+
+	// LD Vx, K - Wait for a key press, store the value of the key in Vx
+	case 0x0A:
+		// TODO: Implement me
+		break;
+
+	// LD DT, Vx - Set delay timer = Vx.
+	case 0x15:
+		cpu->dt = cpu->v[x];
+		break;
+
+	// LD ST, Vx - Set sound timer = Vx.
+	case 0x18:
+		cpu->st = cpu->v[x];
+		break;
+
+	// ADD I, Vx - Set I = I + Vx.
+	case 0x1E:
+		cpu->i += cpu->v[x];
+		break;
+
+	// LD F, Vx - Set I = location of sprite for digit Vx.
+	case 0x29:
+		// Each sprite is 5 bytes long and it starts at 0x0000
+		cpu->i = cpu->v[x] * 5;
+		break;
+
+	// LD B, Vx - Store BCD representation of Vx in memory locations I, I+1, and I+2.
+	case 0x33: {
+		uint8_t number = cpu->v[x];
+		cpu->memory[cpu->i] = number / 100;
+		number %= 100;
+		cpu->memory[cpu->i + 1] = number / 10;
+		cpu->memory[cpu->i + 2] = number % 10;
+		break;
+	}
+
+	// LD [I], Vx - Store registers V0 through Vx in memory starting at location I.
+	case 0x55:
+		for (int i = 0; i < x; ++i) {
+			cpu->memory[cpu->i + i] = cpu->v[i];
+		}
+		cpu->i += x + 1;
+		break;
+
+	// LD Vx, [I] - Read registers V0 through Vx from memory starting at location I.
+	case 0x65:
+		for (int i = 0; i < x; ++i) {
+			cpu->v[i] = cpu->memory[cpu->i + i];
+		}
+		cpu->i += x + 1;
+		break;
+	}
+
 	return;
 }
 

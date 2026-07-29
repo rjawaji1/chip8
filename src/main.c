@@ -61,8 +61,71 @@ int main(int argc, char **argv) {
 	while (running) {
 		cpu_step(&cpu);
 		while (SDL_PollEvent(&event)) {
-			if (event.type == SDL_EVENT_QUIT)
+			switch (event.type) {
+			case SDL_EVENT_QUIT:
 				running = false;
+
+			// Set the keyboard state based on what keys are pressed
+			// We use the XOR instruction to toggle values by listening
+			// and by allowing the key down event to fall through we can let the
+			// key up event to untoggle it to prevent duplication
+			// Future Considerations: Change this system to allow binding to custom keys
+			case SDL_EVENT_KEY_DOWN:
+			case SDL_EVENT_KEY_UP:
+				switch (event.key.key) {
+				case SDLK_1:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_1;
+					break;
+				case SDLK_2:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_2;
+					break;
+				case SDLK_3:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_3;
+					break;
+				case SDLK_4:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_C;
+					break;
+				case SDLK_Q:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_4;
+					break;
+				case SDLK_W:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_5;
+					break;
+				case SDLK_E:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_6;
+					break;
+				case SDLK_R:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_D;
+					break;
+				case SDLK_A:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_7;
+					break;
+				case SDLK_S:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_8;
+					break;
+				case SDLK_D:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_9;
+					break;
+				case SDLK_F:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_E;
+					break;
+				case SDLK_Z:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_A;
+					break;
+				case SDLK_X:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_0;
+					break;
+				case SDLK_C:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_B;
+					break;
+				case SDLK_V:
+					cpu.keyboard_state ^= CHIP8_KEYCODE_F;
+					break;
+				}
+
+				printf("Keycode: %x\n", cpu.keyboard_state);
+				break;
+			}
 		}
 
 		for (int i = 0; i < 10; i++) {

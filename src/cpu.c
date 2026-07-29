@@ -70,8 +70,8 @@ static inline void op_0(Cpu *cpu, uint16_t opcode) {
 		break;
 
 	case 0x00EE: // RET - Return from subroutine
-		cpu->pc = cpu->stack[cpu->sp];
 		cpu->sp--;
+		cpu->pc = cpu->stack[cpu->sp];
 		break;
 	}
 }
@@ -91,7 +91,7 @@ static inline void op_1(Cpu *cpu, uint16_t opcode) {
 static inline void op_2(Cpu *cpu, uint16_t opcode) {
 	uint16_t nnn = opcode & 0x0FFF;
 
-	cpu->stack[cpu->sp] = nnn;
+	cpu->stack[cpu->sp] = cpu->pc;
 	cpu->sp++;
 	cpu->pc = nnn;
 }
@@ -158,7 +158,7 @@ static inline void op_7(Cpu *cpu, uint16_t opcode) {
 static inline void op_8(Cpu *cpu, uint16_t opcode) {
 	uint8_t x = (opcode & 0x0F00) >> 8;
 	uint8_t y = (opcode & 0x00F0) >> 4;
-	uint8_t n = opcode & 0x00F0;
+	uint8_t n = opcode & 0x000F;
 
 	switch (n) {
 	// LD Vx, Vy - Stores the value of register Vy in register Vx
@@ -188,26 +188,26 @@ static inline void op_8(Cpu *cpu, uint16_t opcode) {
 
 	// SUB Vx, Vy - Set Vx = Vx - Vy, set VF = NOT borrow.
 	case 0x5:
-		cpu->v[0xF] = cpu->v[x] > cpu->v[y];
+		cpu->v[0xF] = cpu->v[x] >= cpu->v[y];
 		cpu->v[x] -= cpu->v[y];
 		break;
 
-	// SHR Vx {, Vy} - Set Vx = Vx SHR 1
+	// SHR Vx {, Vy} - Set Vx = Vy SHR 1
 	case 0x6:
-		cpu->v[0xF] = (cpu->v[x] & 0b00000001) == 1;
-		cpu->v[x] >>= 1;
+		cpu->v[0xF] = (cpu->v[y] & 0b00000001) == 1;
+		cpu->v[x] = cpu->v[y] >> 1;
 		break;
 
 	// SUBN Vx, Vy - Set Vx = Vy - Vx, set VF = NOT borrow.
 	case 0x7:
-		cpu->v[0xF] = cpu->v[y] > cpu->v[x];
+		cpu->v[0xF] = cpu->v[y] >= cpu->v[x];
 		cpu->v[x] = cpu->v[y] - cpu->v[x];
 		break;
 
-	// SHL Vx {, Vy} - Set Vx = Vx SHL 1.
+	// SHL Vx {, Vy} - Set Vx = Vy SHL 1.
 	case 0xE:
-		cpu->v[0xF] = (cpu->v[x] & 0b10000000) == 0b10000000;
-		cpu->v[x] <<= 1;
+		cpu->v[0xF] = (cpu->v[y] & 0b10000000) == 0b10000000;
+		cpu->v[x] = cpu->v[y] << 1;
 		break;
 	}
 }
@@ -238,7 +238,7 @@ static inline void op_a(Cpu *cpu, uint16_t opcode) {
  * Jump to location nnn + V0.
  */
 static inline void op_b(Cpu *cpu, uint16_t opcode) {
-	cpu->pc = cpu->i + cpu->v[0];
+	cpu->pc = (opcode & 0x0FFF) + cpu->v[0];
 }
 
 /**
@@ -295,7 +295,24 @@ static inline void op_d(Cpu *cpu, uint16_t opcode) {
 }
 
 static inline void op_e(Cpu *cpu, uint16_t opcode) {
-	return;
+	uint8_t x = (opcode & 0x0FEE) >> 8;
+	uint8_t kk = opcode & 0x00FF;
+
+	switch (kk) {
+	// SKP Vx - Skip next instruction if key with the value of Vx is pressed.
+	case 0x9E:
+		if ((cpu->keyboard_state & (1 << cpu->v[x])) == 1) {
+			cpu->pc += 2;
+		}
+		break;
+
+	// SKNP Vx - Skip next instruction if key with the value of Vx is not pressed.
+	case 0xEA:
+		if ((cpu->keyboard_state & (1 << cpu->v[x])) == 0) {
+			cpu->pc += 2;
+		}
+		break;
+	}
 }
 
 static inline void op_f(Cpu *cpu, uint16_t opcode) {
@@ -310,7 +327,16 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 
 	// LD Vx, K - Wait for a key press, store the value of the key in Vx
 	case 0x0A:
-		// TODO: Implement me
+		if (cpu->keyboard_state == 0) {
+			cpu->pc -= 2;
+		} else {
+			for (int i = 0; i < 16; ++i) {
+				if ((cpu->keyboard_state << i) == 1) {
+					cpu->v[x] = i;
+					break;
+				}
+			}
+		}
 		break;
 
 	// LD DT, Vx - Set delay timer = Vx.
@@ -346,7 +372,7 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 
 	// LD [I], Vx - Store registers V0 through Vx in memory starting at location I.
 	case 0x55:
-		for (int i = 0; i < x; ++i) {
+		for (int i = 0; i <= x; ++i) {
 			cpu->memory[cpu->i + i] = cpu->v[i];
 		}
 		cpu->i += x + 1;
@@ -354,7 +380,7 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 
 	// LD Vx, [I] - Read registers V0 through Vx from memory starting at location I.
 	case 0x65:
-		for (int i = 0; i < x; ++i) {
+		for (int i = 0; i <= x; ++i) {
 			cpu->v[i] = cpu->memory[cpu->i + i];
 		}
 		cpu->i += x + 1;

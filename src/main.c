@@ -14,6 +14,38 @@
 #define FREQUENCY 440.0f
 #define AMPLITUDE 0.1f
 
+typedef struct {
+	float phase;
+	float frequency;
+	float volume;
+} AudioContext;
+
+// TODO: Implement Function
+void SDLCALL audio_callback(
+	void *userdata,
+	SDL_AudioStream *stream,
+	int additional_amount,
+	int total_amount
+) {
+	AudioContext *ctx = (AudioContext *)userdata;
+
+	int samples_needed = additional_amount / sizeof(float);
+	if (samples_needed <= 0) return;
+
+	float *buffer = (float *)SDL_malloc(additional_amount);
+	if (!buffer) return;
+
+	for (int i = 0; i < samples_needed; i++) {
+		buffer[i] = (ctx->phase < 0.5f) ? ctx->volume : -ctx->volume;
+		ctx->phase += ctx->frequency / SAMPLE_RATE;
+
+		if (ctx->phase >= 1.0f) ctx->phase -= 1.0f;
+	}
+
+	SDL_PutAudioStreamData(stream, buffer, additional_amount);
+	SDL_free(buffer);
+};
+
 int main(int argc, char **argv) {
 	// Initialize audio and video
 	if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
@@ -36,12 +68,18 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	SDL_AudioSpec src_spec;
-	src_spec.format = SDL_AUDIO_F32;
-	src_spec.channels = 1;
-	src_spec.freq = SAMPLE_RATE;
+	SDL_AudioSpec src_spec = {
+		.format = SDL_AUDIO_F32,
+		.channels = 1,
+		.freq = SAMPLE_RATE,
+	};
 
-	SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &src_spec, NULL, NULL);
+	AudioContext ctx = {.phase = 0.0f, .frequency = 220.0f, .volume = 0.2f};
+
+	SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(
+		SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &src_spec, audio_callback, &ctx
+	);
+
 	if (!stream) {
 		SDL_Log("Stream creation failed: %s", SDL_GetError());
 		SDL_Quit();
@@ -79,11 +117,6 @@ int main(int argc, char **argv) {
 
 	Uint64 last_display_frame = SDL_GetTicks();
 	Uint64 last_cpu_frame = SDL_GetTicks();
-
-	float audio_buffer[BUFFER_SIZE];
-	float audio_phase = 0;
-	float audio_volume = 1.0f; // Keep it comfortable
-	float audio_frequency = 440.0f;
 
 	SDL_ResumeAudioStreamDevice(stream);
 
@@ -151,10 +184,8 @@ int main(int argc, char **argv) {
 		// Run every 60hz
 		if (SDL_GetTicks() - last_display_frame >= DISPLAY_FRAME_TIME) {
 			// Decrement Timers
-			if (cpu.st > 0)
-				cpu.st--;
-			if (cpu.dt > 0)
-				cpu.dt--;
+			if (cpu.st > 0) cpu.st--;
+			if (cpu.dt > 0) cpu.dt--;
 
 			// Clear Display
 			SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
@@ -185,30 +216,19 @@ int main(int argc, char **argv) {
 			if (SDL_AudioStreamDevicePaused(stream)) {
 				SDL_ResumeAudioStreamDevice(stream);
 			}
-			if (SDL_GetAudioStreamQueued(stream) < 2048) {
-				float sample_buffer[512];
-				for (int i = 0; i < 512; i++) {
-					// Generate a standard chiptune square wave profile
-					float period = 44100.0f / audio_frequency;
-					if (((int)(audio_phase / (period / 2.0f)) % 2) == 0) {
-						sample_buffer[i] = audio_volume;
-					} else {
-						sample_buffer[i] = -audio_volume;
-					}
-					audio_phase++;
-				}
-				SDL_PutAudioStreamData(stream, sample_buffer, sizeof(sample_buffer));
-			}
 		} else {
 			if (!SDL_AudioStreamDevicePaused(stream)) {
 				SDL_PauseAudioStreamDevice(stream);
+				SDL_ClearAudioStream(stream);
 			}
 		}
 
-		// Slow down the processing for a bit
+		// Slow down the processing most of our code is locked
+		// to around 700hz anyway
 		SDL_Delay(1);
 	}
 
+	// Clean Up Resources
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyAudioStream(stream);
 	SDL_DestroyWindow(window);

@@ -4,7 +4,13 @@ BasedOnStyle: LLVM
 UseTab: Always
 IndentWidth: 4
 TabWidth: 4
-ColumnLimit: 120
+ColumnLimit: 80
+
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: BlockIndent
+
+AllowShortIfStatementsOnASingleLine: WithoutElse
 
 AllowShortFunctionsOnASingleLine: None
 

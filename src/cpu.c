@@ -35,6 +35,7 @@ Cpu cpu_new() {
 void cpu_step(Cpu *cpu) {
 	// If the program counter is out of bounds we loop back to the start
 	// this is not standard and ideally it would be best to crash the system
+	// TODO: Crash the system
 	if (cpu->pc >= 0x0FFF) {
 		cpu->pc = 0x200;
 	}
@@ -257,7 +258,8 @@ static inline void op_c(Cpu *cpu, uint16_t opcode) {
 
 /**
  * Dxyn - DRW Vx, Vy, nibble
- * Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+ * Display n-byte sprite starting at memory location I at (Vx, Vy),
+ * set VF = collision.
  */
 static inline void op_d(Cpu *cpu, uint16_t opcode) {
 	uint8_t x_pos = cpu->v[(opcode & 0x0F00) >> 8];
@@ -310,7 +312,8 @@ static inline void op_e(Cpu *cpu, uint16_t opcode) {
 		}
 		break;
 
-	// SKNP Vx - Skip next instruction if key with the value of Vx is not pressed.
+	// SKNP Vx - Skip next instruction if key with the value of Vx is not
+	// pressed.
 	case 0xA1:
 		if ((cpu->keyboard_state & (1u << cpu->v[x])) == 0) {
 			cpu->pc += 2;
@@ -364,7 +367,8 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 		cpu->i = cpu->v[x] * 5;
 		break;
 
-	// LD B, Vx - Store BCD representation of Vx in memory locations I, I+1, and I+2.
+	// LD B, Vx
+	// Store BCD representation of Vx in memory locations I, I+1, and I+2.
 	case 0x33: {
 		uint8_t number = cpu->v[x];
 		cpu->memory[cpu->i] = number / 100;
@@ -374,7 +378,8 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 		break;
 	}
 
-	// LD [I], Vx - Store registers V0 through Vx in memory starting at location I.
+	// LD [I], Vx
+	// Store registers V0 through Vx in memory starting at location I.
 	case 0x55:
 		for (int i = 0; i <= x; ++i) {
 			cpu->memory[cpu->i + i] = cpu->v[i];
@@ -382,7 +387,8 @@ static inline void op_f(Cpu *cpu, uint16_t opcode) {
 		cpu->i += x + 1;
 		break;
 
-	// LD Vx, [I] - Read registers V0 through Vx from memory starting at location I.
+	// LD Vx, [I] -
+	// Read registers V0 through Vx from memory starting at location I.
 	case 0x65:
 		for (int i = 0; i <= x; ++i) {
 			cpu->v[i] = cpu->memory[cpu->i + i];

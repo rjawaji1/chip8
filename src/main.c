@@ -85,8 +85,6 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	SDL_ResumeAudioStreamDevice(stream);
-
 	// Setup The CPU
 	Cpu cpu = cpu_new();
 
@@ -116,8 +114,6 @@ int main(int argc, char **argv) {
 
 	Uint64 last_display_frame = SDL_GetTicks();
 	Uint64 last_cpu_frame = SDL_GetTicks();
-
-	SDL_ResumeAudioStreamDevice(stream);
 
 	while (running) {
 		cpu_step(&cpu);

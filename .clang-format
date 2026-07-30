@@ -9,6 +9,7 @@ ColumnLimit: 80
 BinPackParameters: false
 BinPackArguments: false
 AlignAfterOpenBracket: BlockIndent
+Cpp11BracedListStyle: true
 
 AllowShortIfStatementsOnASingleLine: WithoutElse
 

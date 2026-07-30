@@ -20,7 +20,6 @@ typedef struct {
 	float volume;
 } AudioContext;
 
-// TODO: Implement Function
 void SDLCALL audio_callback(
 	void *userdata,
 	SDL_AudioStream *stream,

@@ -1,11 +1,10 @@
+#include "cpu.h"
 #include <assert.h>
 #include <stdckdint.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "cpu.h"
 
 Cpu cpu_new() {
 	return (Cpu){

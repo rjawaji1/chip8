@@ -1,4 +1,3 @@
-#include "SDL3/SDL_audio.h"
 #include "cpu.h"
 
 #include <stdint.h>
@@ -9,10 +8,7 @@
 
 #include <SDL3/SDL.h>
 
-#define SAMPLE_RATE 44100
-#define BUFFER_SIZE 2048
-#define FREQUENCY 440.0f
-#define AMPLITUDE 0.1f
+#define SAMPLE_RATE 44100 // 44.1kHz
 
 typedef struct {
 	float phase;
@@ -110,13 +106,12 @@ int main(int argc, char **argv) {
 	SDL_Event event;
 
 	const Uint64 DISPLAY_FRAME_TIME = 1000 / 60; // 60hz
-	const Uint64 CPU_FRAME_TIME = 1000 / 700;	 // 500hz
+	const Uint64 CPU_FRAME_TIME = 1000 / 700;	 // 700hz
 
 	Uint64 last_display_frame = SDL_GetTicks();
 	Uint64 last_cpu_frame = SDL_GetTicks();
 
 	while (running) {
-		cpu_step(&cpu);
 		while (SDL_PollEvent(&event)) {
 			switch (event.type) {
 			case SDL_EVENT_QUIT:
@@ -173,7 +168,7 @@ int main(int argc, char **argv) {
 		// Run every 500hz
 		if (SDL_GetTicks() - last_cpu_frame >= CPU_FRAME_TIME) {
 			cpu_step(&cpu);
-			last_cpu_frame += DISPLAY_FRAME_TIME;
+			last_cpu_frame += CPU_FRAME_TIME;
 		}
 
 		// Run every 60hz
@@ -217,10 +212,6 @@ int main(int argc, char **argv) {
 				SDL_ClearAudioStream(stream);
 			}
 		}
-
-		// Slow down the processing most of our code is locked
-		// to around 700hz anyway
-		SDL_Delay(1);
 	}
 
 	// Clean Up Resources
